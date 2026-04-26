@@ -1,0 +1,7 @@
+*.json
+*.json.gz
+__pycache__/
+.venv/
+20079788_Abinash Prasana Selvanathan_CA2_RS.ipynb
+20079788_Abinash Prasana Selvanathan_CA2_RS.txt
+extract.py

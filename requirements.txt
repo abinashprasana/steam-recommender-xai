@@ -1,0 +1,10 @@
+Flask==3.0.3
+numpy
+pandas
+matplotlib
+seaborn
+scipy
+scikit-learn
+tqdm
+shap
+lime
