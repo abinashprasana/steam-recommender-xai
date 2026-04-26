@@ -29,7 +29,7 @@ All results are presented through a designed Flask web dashboard with clear expl
 
 <!-- Record your screen running train.py and the Flask dashboard, then upload here -->
 
-https://github.com/user-attachments/assets/YOUR-VIDEO-ID-HERE
+https://github.com/user-attachments/assets/5c6a83db-2936-4112-901a-addcc85d5c54
 
 ---
 
