@@ -2,10 +2,11 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import plotstyle
+plotstyle.apply()
 import shap
 import lime
 import lime.lime_tabular
-from sklearn.ensemble import RandomForestClassifier
 
 def run_xai(X_train, X_test, y_train, y_test, clf, FEATURE_COLS, RANDOM_SEED=42, output_dir='static'):
     if not os.path.exists(output_dir):
@@ -27,9 +28,9 @@ def run_xai(X_train, X_test, y_train, y_test, clf, FEATURE_COLS, RANDOM_SEED=42,
     shap_df = shap_df.sort_values('importance', ascending=True)
 
     fig, ax = plt.subplots(figsize=(10, 8))
-    bar_colors = ['#4C72B0' if v > shap_df['importance'].median() else '#AEC6CF' for v in shap_df['importance']]
-    ax.barh(shap_df['feature'], shap_df['importance'], color=bar_colors, edgecolor='white')
-    ax.axvline(shap_df['importance'].median(), color='red', linestyle='--', linewidth=1, alpha=0.6, label='Median')
+    bar_colors = [plotstyle.BLUE if v > shap_df['importance'].median() else plotstyle.SLATE for v in shap_df['importance']]
+    ax.barh(shap_df['feature'], shap_df['importance'], color=bar_colors, edgecolor=plotstyle.BG)
+    ax.axvline(shap_df['importance'].median(), color=plotstyle.AMBER, linestyle='--', linewidth=1, alpha=0.6, label='Median')
     ax.set_xlabel('Mean |SHAP value|')
     ax.set_title('SHAP — Which Features Drive Recommendations Most?')
     ax.legend()
@@ -80,11 +81,11 @@ def run_xai(X_train, X_test, y_train, y_test, clf, FEATURE_COLS, RANDOM_SEED=42,
         exp_list = sorted(exp.as_list(), key=lambda x: x[1])
         feat_labels = [f[:35] for f, w in exp_list]
         weights = [w for f, w in exp_list]
-        bar_colors = ['#2980B9' if w > 0 else '#E67E22' for w in weights]
+        bar_colors = [plotstyle.BLUE if w > 0 else plotstyle.AMBER for w in weights]
 
         fig, ax = plt.subplots(figsize=(10, 6))
-        ax.barh(feat_labels, weights, color=bar_colors, edgecolor='white')
-        ax.axvline(0, color='black', linewidth=0.8, alpha=0.5)
+        ax.barh(feat_labels, weights, color=bar_colors, edgecolor=plotstyle.BG)
+        ax.axvline(0, color=plotstyle.FAINT, linewidth=0.8, alpha=0.5)
         ax.set_xlabel('LIME weight (positive pushes towards Recommended)')
         ax.set_title(f"LIME — Likely {label_name.replace('_', ' ')} (prob = {prob:.2f})")
         plt.tight_layout()
@@ -106,9 +107,9 @@ def run_xai(X_train, X_test, y_train, y_test, clf, FEATURE_COLS, RANDOM_SEED=42,
     fig, ax = plt.subplots(figsize=(10, 5))
     x = np.arange(len(stab_df))
     w = 0.25
-    colors = ['#2E86AB', '#F18F01', '#6C5B7B']
+    colors = [plotstyle.BLUE, plotstyle.AMBER, plotstyle.VIOLET]
     for i, col in enumerate(stab_df.columns):
-        ax.bar(x + i * w, stab_df[col].abs(), w, label=col, color=colors[i], edgecolor='white', alpha=0.85)
+        ax.bar(x + i * w, stab_df[col].abs(), w, label=col, color=colors[i], edgecolor=plotstyle.BG, alpha=0.85)
     ax.set_xticks(x + w)
     ax.set_xticklabels(stab_df.index, rotation=30, ha='right')
     ax.set_ylabel('Absolute LIME weight')
@@ -127,12 +128,12 @@ def run_xai(X_train, X_test, y_train, y_test, clf, FEATURE_COLS, RANDOM_SEED=42,
     lime_norm = lime_vals / (lime_vals.max() + 1e-9)
 
     fig, axes = plt.subplots(1, 2, figsize=(15, 6))
-    axes[0].barh(top_shap['feature'].values[::-1], shap_norm[::-1], color='#4C72B0', edgecolor='white')
+    axes[0].barh(top_shap['feature'].values[::-1], shap_norm[::-1], color=plotstyle.BLUE, edgecolor=plotstyle.BG)
     axes[0].set_title('SHAP — Top Features (Global Average)')
     axes[0].set_xlabel('Normalised Importance')
 
     lime_labels = [f.split('=')[0].strip()[:25] if '=' in f else f[:25] for f, _ in lime_list]
-    axes[1].barh(lime_labels[::-1], lime_norm[::-1], color='#55A868', edgecolor='white')
+    axes[1].barh(lime_labels[::-1], lime_norm[::-1], color=plotstyle.GREEN, edgecolor=plotstyle.BG)
     axes[1].set_title('LIME — Top Features (One Instance)')
     axes[1].set_xlabel('Normalised |Weight|')
 

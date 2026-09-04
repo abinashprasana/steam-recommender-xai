@@ -1,0 +1,117 @@
+/* Design tokens.
+ *
+ * Steam's hues, built with the structural discipline that makes Linear and
+ * Vercel read as expensive, and warmed so it stops looking like the default
+ * AI-dashboard palette. Three deliberate departures from that default:
+ *
+ *   1. A serif display face. "Inter everywhere" is the single most reliable
+ *      tell of a generated interface.
+ *   2. A warm counter-accent. Amber is not decoration here -- it is already the
+ *      Popularity series and the narrow-catalogue warning band, so it carries
+ *      meaning before it carries style.
+ *   3. No gradient headline. A blue-to-violet gradient is the canonical
+ *      "make it look technical" move and it was on the largest element here.
+ */
+
+:root {
+  /* Ground: warmer than a blue-black, still unmistakably Steam */
+  --bg-void: #0b141c;
+  --bg-base: #101c26;
+  --bg-panel: #16232f;
+  --bg-elevated: #1e2e3c;
+
+  /* Translucent, blue-tinted borders rather than solid grey. This is what makes
+     panels read as layered glass instead of stacked boxes. */
+  --border-faint: rgba(122, 162, 199, 0.07);
+  --border: rgba(122, 162, 199, 0.14);
+  --border-strong: rgba(122, 162, 199, 0.24);
+
+  /* Prose sits warm, never pure white. Contrast for every pair is verified
+     against the ground rather than inherited from the previous palette. */
+  --text-primary: #f2f5f8;
+  --text-body: #e4e8ec;
+  --text-muted: #a3b3c0;
+  /* Lifted from #8496a5. The aurora raises the page floor, and against the
+     bound where all three washes peak on one pixel the old value measured
+     4.35:1, under the 4.5 floor. Realistically it never went below 5.62:1,
+     but four points of lightness buys the guarantee outright instead of
+     resting on where the gradients happen to sit today. */
+  --text-faint: #889aa8;
+
+  /* Blue carries structure and interaction. Amber carries the argument. */
+  --accent: #1a9fff;
+  --accent-hi: #66c0f4;
+  --accent-dim: rgba(26, 159, 255, 0.14);
+  --amber: #f0a868;
+  --amber-dim: rgba(240, 168, 104, 0.14);
+  --violet: #9b7fe8;
+  --success: #a1cd44;
+  --danger: #f8716a;
+
+  /* Illustration palette, kept separate from the UI palette so the hero and the
+     charts can have depth without dragging interface colours around with them. */
+  --ill-stroke: #2a4257;
+  --ill-main: #4e7fa6;
+  --ill-highlight: #66c0f4;
+  --ill-secondary: #f0a868;
+  --ill-tertiary: #9b7fe8;
+
+  /* Series colours. Each model keeps its colour everywhere, so the mapping is
+     learned once. Popularity is amber because it is the finding. */
+  --c-popularity: #f0a868;
+  --c-ease: #66c0f4;
+  --c-bpr: #9b7fe8;
+  --c-hybrid: #4ecdc4;
+  --c-itemknn: #a1cd44;
+  --c-content: #8496a5;
+  --c-calibrated: #e089c4;
+
+  --s1: 4px;   --s2: 8px;   --s3: 12px;  --s4: 16px;
+  --s5: 24px;  --s6: 32px;  --s7: 48px;  --s8: 64px;
+  --s9: 96px;  --s10: 128px; --s11: 176px;
+
+  --r-chip: 4px;
+  --r-control: 8px;
+  --r-card: 14px;
+  --r-hero: 20px;
+  --r-pill: 9999px;
+
+  /* Elevation on a dark ground is a border plus a top inner highlight. Drop
+     shadows on near-black read as smudges. */
+  --lift: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --glow-blue: 0 0 60px -20px var(--accent);
+  --glow-amber: 0 0 60px -20px var(--amber);
+
+  --font-display: 'Instrument Serif', 'Iowan Old Style', Georgia, serif;
+  --font-sans: 'Inter var', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    Roboto, 'Helvetica Neue', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo,
+    Consolas, monospace;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  /* Deliberately no overshoot. Bounce and elastic easing read as dated. */
+  --ease-out-soft: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --dur-fast: 120ms;
+  --dur-mid: 260ms;
+  --dur-slow: 600ms;
+
+  --maxw: 1180px;
+  --measure: 66ch;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0.01ms;
+    --dur-mid: 0.01ms;
+    --dur-slow: 0.01ms;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

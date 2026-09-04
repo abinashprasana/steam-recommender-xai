@@ -1,290 +1,332 @@
-from flask import Flask, render_template_string
-import json
-import os
+"""Flask backend: JSON API plus static host for the built front end.
 
-app = Flask(__name__)
-
-HTML_TEMPLATE = """
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Steam Game Recommender</title>
-    <style>
-        :root {
-            --bg-color: #0d1117;
-            --text-color: #c9d1d9;
-            --card-bg: #161b22;
-            --accent-color: #58a6ff;
-            --border-color: #30363d;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
-            padding: 0;
-            line-height: 1.6;
-        }
-        nav {
-            background-color: var(--card-bg);
-            border-bottom: 1px solid var(--border-color);
-            padding: 1rem 2rem;
-            display: flex;
-            justify-content: center;
-            gap: 2rem;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-        }
-        nav a {
-            color: var(--text-color);
-            text-decoration: none;
-            font-weight: 600;
-        }
-        nav a:hover {
-            color: var(--accent-color);
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-        h1, h2, h3 {
-            color: #fff;
-        }
-        .section {
-            margin-bottom: 4rem;
-            padding-top: 2rem;
-        }
-        .card {
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-        }
-        .plot-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin: 2rem 0;
-        }
-        .plot-container img {
-            max-width: 100%;
-            height: auto;
-            border-radius: 4px;
-            border: 1px solid var(--border-color);
-        }
-        .caption {
-            margin-top: 0.5rem;
-            font-size: 0.9rem;
-            color: #8b949e;
-            text-align: center;
-        }
-        .metrics-table {
-            width: 100%;
-            max-width: 600px;
-            margin: 1rem auto;
-            border-collapse: collapse;
-        }
-        .metrics-table th, .metrics-table td {
-            border: 1px solid var(--border-color);
-            padding: 0.75rem;
-            text-align: center;
-        }
-        .metrics-table th {
-            background-color: #21262d;
-        }
-        .flex-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 2rem;
-            justify-content: center;
-        }
-        .flex-col {
-            flex: 1;
-            min-width: 300px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        p {
-            font-size: 1.05rem;
-        }
-    </style>
-</head>
-<body>
-    <nav>
-        <a href="#performance">Recommender Performance</a>
-        <a href="#xai">XAI Analysis</a>
-        <a href="#bias">Bias & Fairness</a>
-    </nav>
-    <div class="container">
-        <header style="text-align: center; margin-bottom: 3rem;">
-            <h1>Steam Game Recommender Dashboard</h1>
-            <p>Analysis of performance, explainability, and popularity bias in game recommendations.</p>
-        </header>
-
-        <!-- PERFORMANCE SECTION -->
-        <div id="performance" class="section card">
-            <h2>Recommender Performance</h2>
-            <p>
-                This section is all about how well the game recommender actually works in practice. I used a method called Bayesian Personalized Ranking which we usually just call BPR for short. This method learns from what games users have actually played instead of asking them for explicit star ratings. It basically figures out your preferences by looking at the games you chose to play over the ones you ignored. One big challenge in building this was dealing with brand new players who have not played anything yet. This is known as the cold start problem because the system has no history to learn from. To handle these new users my system asks them for their favourite genres and then looks at how positive the overall community sentiment is to recommend the best games in those categories.
-            </p>
-            <p>
-                Before we can trust the recommender we need to measure how good its suggestions are. The NDCG at 10 score measures whether the one game we know a user actually liked appeared near the very top of their recommendation list. The MAP at 10 score measures exactly the same thing but it averages the position across all the users we tested. The distribution chart below shows how these scores are spread out across different users in the test group. You can see that some users get a perfect score of one because the system guessed exactly what they wanted while others get a zero because their unique preferences were just too hard to predict.
-            </p>
-            <table class="metrics-table">
-                <tr>
-                    <th>Metric</th>
-                    <th>Score</th>
-                </tr>
-                <tr>
-                    <td>NDCG@10</td>
-                    <td>{{ "%.4f"|format(results.NDCG_10) }}</td>
-                </tr>
-                <tr>
-                    <td>MAP@10</td>
-                    <td>{{ "%.4f"|format(results.MAP_10) }}</td>
-                </tr>
-            </table>
-            
-            <div class="plot-container">
-                <img src="{{ url_for('static', filename='evaluation_metrics.png') }}" alt="Evaluation Metrics">
-                <div class="caption">Figure 1: NDCG and MAP scores alongside a histogram showing how individual user scores vary across the test set.</div>
-            </div>
-        </div>
-
-        <!-- XAI SECTION -->
-        <div id="xai" class="section card">
-            <h2>Explainable AI Analysis</h2>
-            <p>
-                This section looks at explainable artificial intelligence which helps us understand why the model made a specific recommendation. Without these tools the machine learning model is basically a black box where we put data in and get answers out without knowing how it got there. I used two different tools called SHAP and LIME to crack open this black box. SHAP gives us a big picture view of how the model thinks overall while LIME zooms in to explain individual game recommendations.
-            </p>
-            
-            <h3>Global Explanations</h3>
-            <p>
-                The first tool I used is SHAP which helps us see the global picture of what the model cares about. This bar chart shows which game features matter most on average across all the predictions the model makes. I found it really interesting that being an Open World game and the price of the game came out as the absolute strongest signals. This makes sense because players generally have strong feelings about paying full price and whether they want a massive game world to explore.
-            </p>
-            <div class="plot-container">
-                <img src="{{ url_for('static', filename='shap_bar.png') }}" alt="SHAP Bar Chart">
-                <div class="caption">Figure 2: Global feature importance calculated by SHAP showing Open World as the strongest predictor.</div>
-            </div>
-
-            <p>
-                This next chart is a SHAP beeswarm plot which gives us even more detail about how these features affect the score. Every single dot you see on this chart represents one prediction made for a user. The colour of the dot shows whether the actual feature value was high or low for that specific game. When looking at price you can see a really interesting non linear relationship where both very cheap and very expensive games behave differently than average priced ones.
-            </p>
-            <div class="plot-container">
-                <img src="{{ url_for('static', filename='shap_beeswarm.png') }}" alt="SHAP Beeswarm">
-                <div class="caption">Figure 3: Beeswarm plot illustrating how the high or low value of a feature impacts the final recommendation score.</div>
-            </div>
-
-            <h3>Local Explanations</h3>
-            <p>
-                Now we move on to LIME which takes just one specific game recommendation and breaks down exactly why it happened. This first example looks at a game that the model was very confident the user would enjoy playing. In this case the fact that the game was not in early access pushed the score up significantly. This tells us that this particular user probably prefers finished games rather than buying into betas or incomplete projects.
-            </p>
-            <div class="plot-container">
-                <img src="{{ url_for('static', filename='lime_recommended.png') }}" alt="LIME Recommended Instance">
-                <div class="caption">Figure 4: A LIME explanation for a game that the system successfully recommended to a user.</div>
-            </div>
-
-            <p>
-                This second LIME example shows the exact opposite situation where the model decided not to recommend a game. Here we can see what features dragged the score down and made the model think it was a bad match. It turns out that the game being Free to Play was present and that pushed the score down heavily. This suggests the user tends to avoid free games and might prefer premium titles without microtransactions.
-            </p>
-            <div class="plot-container">
-                <img src="{{ url_for('static', filename='lime_not_recommended.png') }}" alt="LIME Not Recommended Instance">
-                <div class="caption">Figure 5: A LIME explanation for a game that the system actively decided not to recommend.</div>
-            </div>
-
-            <p>
-                One issue with LIME is that it works by generating random samples to test the model and this can sometimes give unstable answers. I ran a stability check to see what happens when we run LIME with a very small sample size. Running it with too few samples gives completely unreliable results where the feature importance jumps all over the place. Using five hundred samples proved to be the safe minimum to get a consistent and trustworthy explanation every time.
-            </p>
-            <div class="plot-container">
-                <img src="{{ url_for('static', filename='lime_stability.png') }}" alt="LIME Stability">
-                <div class="caption">Figure 6: A stability test comparing LIME outputs generated using three different sample sizes.</div>
-            </div>
-
-            <p>
-                Finally I wanted to compare how SHAP and LIME see the world side by side. The chart compares the global feature rankings from SHAP with the local rankings from one single LIME instance. While both tools generally agreed on what the most important features were overall they disagree completely at the instance level. This happens because LIME only looks at one specific game for one specific person while SHAP averages everything out across the entire dataset.
-            </p>
-            <div class="plot-container">
-                <img src="{{ url_for('static', filename='shap_vs_lime.png') }}" alt="SHAP vs LIME">
-                <div class="caption">Figure 7: A direct comparison between the global average from SHAP and a single local explanation from LIME.</div>
-            </div>
-        </div>
-
-        <!-- BIAS SECTION -->
-        <div id="bias" class="section card">
-            <h2>Bias and Fairness</h2>
-            <p>
-                The final part of my project looks at something called popularity bias which is a really common problem in machine learning. Popularity bias happens when the model tends to recommend the exact same well known games over and over again to everyone. It does this because those huge games have way more data to learn from compared to smaller obscure titles. This means that niche games never get recommended and users just see the same top sellers they already know about.
-            </p>
-
-            <p>
-                To see how bad this bias actually is I compared what games exist in the dataset against what users actually interact with. The chart shows the total catalogue of games on the left versus the sheer volume of interactions on the right. You can clearly see that Indie games make up a massive chunk of the available games but they get very little attention from players. Meanwhile a tiny number of massive games are eating up almost all the player interactions.
-            </p>
-            <div class="plot-container">
-                <img src="{{ url_for('static', filename='popularity_bias.png') }}" alt="Popularity Bias">
-                <div class="caption">Figure 8: A comparison showing the imbalance between the number of games available and the number of interactions they receive.</div>
-            </div>
-
-            <p>
-                This next chart shows how the bias affects the actual recommendations the system hands out to players. It compares the true share of genres in the catalogue against the share of genres that actually show up in recommendation lists. Action games appear far more often in recommendations than their catalogue share would suggest is fair. This proves the model is playing it safe by just pushing popular action titles instead of exploring the full catalogue.
-            </p>
-            <div class="plot-container">
-                <img src="{{ url_for('static', filename='genre_share_bias.png') }}" alt="Genre Share Bias">
-                <div class="caption">Figure 9: The true percentage of games by genre versus how often those genres are actually recommended by the system.</div>
-            </div>
-
-            <h3>Mitigation 1: Inverse Popularity Penalty</h3>
-            <p>
-                To fix this I tried a mitigation strategy where I penalise games for being too popular. I used a parameter called beta to control exactly how strong this penalty should be. Lowering the beta value gives less popular games a much fairer chance of showing up in the recommendations. However we have to be careful because pushing too many unknown games risks recommending things the user might not actually enjoy playing.
-            </p>
-            <div class="plot-container">
-                <img src="{{ url_for('static', filename='beta_sweep.png') }}" alt="Beta Sweep for Popularity Penalty">
-                <div class="caption">Figure 10: How the average popularity of recommended games drops as the beta penalty gets stronger.</div>
-            </div>
-
-            <h3>Mitigation 2: Diversity Constraint</h3>
-            <p>
-                My second idea to fix the bias was to force the system to pick games from a wider variety of genres. I measured how well this worked using something called Shannon entropy. Higher entropy just means there is much more variety and less repetition in the final recommendation list. The chart shows that applying this diversity constraint produced a small but very real improvement in how varied the suggestions were for most users.
-            </p>
-            <div class="plot-container">
-                <img src="{{ url_for('static', filename='entropy_comparison.png') }}" alt="Entropy Comparison">
-                <div class="caption">Figure 11: A histogram showing the increase in genre diversity after turning on the diversity constraint.</div>
-            </div>
-            
-            <table class="metrics-table">
-                <tr>
-                    <th>Configuration</th>
-                    <th>Average Genre Entropy</th>
-                </tr>
-                <tr>
-                    <td>Standard Recommender</td>
-                    <td>{{ "%.3f"|format(results.bias.mean_std_entropy) }}</td>
-                </tr>
-                <tr>
-                    <td>Diversified Recommender</td>
-                    <td>{{ "%.3f"|format(results.bias.mean_div_entropy) }}</td>
-                </tr>
-            </table>
-        </div>
-    </div>
-</body>
-</html>
+Previously this rendered Jinja templates around stored PNGs. The UI now lives in
+frontend/ as a Vite bundle; this file's job is to expose the model over JSON and
+serve that bundle. Live inference and counterfactual explanation stay server-side
+because they need the trained factors -- everything here reuses the existing
+modules rather than reimplementing scoring.
 """
+import os
+import io
+import gzip
+import json
+import hashlib
+import numpy as np
+from flask import Flask, jsonify, request, send_from_directory
 
-@app.route('/')
-def index():
-    if os.path.exists('results.json'):
-        with open('results.json', 'r') as f:
-            results = json.load(f)
-    else:
-        results = {"NDCG_10": 0.0, "MAP_10": 0.0, "bias": {"mean_std_entropy": 0.0, "mean_div_entropy": 0.0}}
-    
-    return render_template_string(HTML_TEMPLATE, results=results)
+from persistence import load_artifacts, artifacts_exist
+from recommender import cold_start_recommend
+from explain import CounterfactualExplainer, render_explanation
+
+DIST_DIR = os.path.join('frontend', 'dist')
+
+# Stars of celestial navigation: the fixed points you take a bearing from, which
+# is the same idea the product is named for. The dataset ships anonymised numeric
+# ids like 111222333444555666888; showing those asks a reader to pick between
+# meaningless digit strings. Each id is mapped to a star deterministically, so the
+# same player is always the same name without inventing or storing anything about
+# them. There are 55 here, and the collision walk below depends on that count
+# being whatever len(NAV_STARS) actually is rather than on a number in a comment.
+NAV_STARS = [
+    'Acamar', 'Achernar', 'Acrux', 'Adhara', 'Aldebaran', 'Alioth', 'Alkaid',
+    'Alnilam', 'Alphard', 'Alphecca', 'Alpheratz', 'Altair', 'Ankaa', 'Antares',
+    'Arcturus', 'Atria', 'Avior', 'Bellatrix', 'Betelgeuse', 'Canopus', 'Capella',
+    'Deneb', 'Denebola', 'Diphda', 'Dubhe', 'Elnath', 'Eltanin', 'Enif',
+    'Fomalhaut', 'Gacrux', 'Gienah', 'Hadar', 'Hamal', 'Kochab', 'Markab',
+    'Menkar', 'Menkent', 'Miaplacidus', 'Mirfak', 'Nunki', 'Peacock', 'Polaris',
+    'Pollux', 'Procyon', 'Rasalhague', 'Regulus', 'Rigel', 'Sabik', 'Schedar',
+    'Shaula', 'Sirius', 'Spica', 'Suhail', 'Vega', 'Zubenelgenubi',
+]
+
+
+def star_name(user_id: str) -> str:
+    """Stable pseudonym for a player id. Same id always yields the same star."""
+    h = hashlib.sha1(str(user_id).encode('utf-8')).hexdigest()
+    return NAV_STARS[int(h[:8], 16) % len(NAV_STARS)]
+
+app = Flask(__name__, static_folder=None)
+
+_state = {'loaded': False}
+
+
+class LoadedRecommender:
+    """Scores users from persisted factors, with no training data in memory."""
+
+    def __init__(self, payload):
+        self.user_factors = np.asarray(payload['user_factors'])
+        self.item_factors = np.asarray(payload['item_factors'])
+        self.n_items = int(payload['n_items'])
+
+    def score_all(self, user_idx):
+        return self.user_factors[user_idx] @ self.item_factors.T
+
+
+def get_state():
+    """Load artifacts once, lazily. Missing artifacts are reported, not fatal."""
+    if _state['loaded']:
+        return _state
+    _state['loaded'] = True
+    if not artifacts_exist():
+        _state['error'] = "No trained model found. Run 'python train.py' first."
+        return _state
+
+    payload = load_artifacts()
+    _state['model'] = LoadedRecommender(payload)
+    _state['games'] = payload['games_in_use']
+    _state['train_by_user'] = payload['train_by_user']
+    _state['user_enc'] = payload['user_enc']
+    _state['n_items'] = int(payload['n_items'])
+    _state['explainer'] = CounterfactualExplainer(
+        payload['item_factors'], int(payload['n_items']),
+        payload['train_by_user'], payload['games_in_use'])
+    return _state
+
+
+def game_name(games, idx):
+    if idx in games.index:
+        row = games.loc[idx]
+        return row.get('app_name') or row.get('title') or f'item {idx}'
+    return f'item {idx}'
+
+
+def game_genres(games, idx):
+    if idx in games.index:
+        g = games.loc[idx, 'genres']
+        return list(g) if isinstance(g, (list, tuple)) else []
+    return []
+
+
+# ----------------------------------------------------------------- API
+
+@app.get('/api/results')
+def api_results():
+    """The evaluation report written by train.py."""
+    if not os.path.exists('results.json'):
+        return jsonify({'error': 'results.json missing. Run python train.py.'}), 404
+    with open('results.json', encoding='utf-8') as f:
+        return jsonify(json.load(f))
+
+
+@app.get('/api/users')
+def api_users():
+    """Sample players, described by what they actually play.
+
+    The raw Steam ids are anonymised digit strings like 111222333444555666888.
+    Asking someone to pick one of those is asking them to choose at random. Each
+    player is labelled here by the genres that dominate their own library, which
+    is information we already hold and which makes the choice mean something.
+    The real id is still returned, so direct lookup keeps working.
+    """
+    st = get_state()
+    if st.get('error'):
+        return jsonify({'error': st['error']}), 503
+
+    tbu, enc, games = st['train_by_user'], st['user_enc'], st['games']
+
+    # Catalogue base rate per genre, computed once. Picking a player's *most
+    # frequent* genre just describes the catalogue: Action sits on most of it, so
+    # every player came out as "Action, Adventure". Ranking by lift over the base
+    # rate surfaces what is actually distinctive about each library instead.
+    base = st.get('genre_base')
+    if base is None:
+        base = {}
+        total = 0
+        for gs in games['genres']:
+            if not isinstance(gs, (list, tuple)):
+                continue
+            total += 1
+            for g in gs:
+                base[g] = base.get(g, 0) + 1
+        base = {g: c / max(total, 1) for g, c in base.items()}
+        st['genre_base'] = base
+
+    picks = [u for u in list(tbu.keys())[:600] if len(tbu[u]) >= 6][:12]
+    out = []
+    used = set()
+    for u in picks:
+        counts, seen = {}, 0
+        for idx in tbu[u]:
+            if idx not in games.index:
+                continue
+            genres = games.loc[idx, 'genres']
+            if not isinstance(genres, (list, tuple)):
+                continue
+            seen += 1
+            for g in genres:
+                counts[g] = counts.get(g, 0) + 1
+
+        # Lift, with a floor on the count so a single oddity does not define a
+        # player, and a floor on the base rate so rare genres do not run away.
+        scored = [
+            (g, (c / max(seen, 1)) / max(base.get(g, 0.01), 0.02))
+            for g, c in counts.items() if c >= 2
+        ] or [(g, c) for g, c in counts.items()]
+        scored.sort(key=lambda kv: -kv[1])
+
+        raw_id = str(enc.inverse_transform([u])[0])
+        # Collisions are possible across 55 stars, so step to the next free one
+        # rather than showing the same name twice in one list.
+        name = star_name(raw_id)
+        if name in used:
+            start = NAV_STARS.index(name)
+            for k in range(1, len(NAV_STARS)):
+                alt = NAV_STARS[(start + k) % len(NAV_STARS)]
+                if alt not in used:
+                    name = alt
+                    break
+        used.add(name)
+
+        out.append({
+            'id': raw_id,
+            'display': name,
+            'taste': ' · '.join(g for g, _ in scored[:2]),
+            'history_size': len(tbu[u]),
+        })
+
+    return jsonify({'users': out})
+
+
+@app.get('/api/recommend/<user_id>')
+def api_recommend(user_id):
+    """Top-N for a real user, each with a counterfactual explanation.
+
+    The explanation names which of the user's own games hold the recommendation
+    up, verified by re-fitting their latent vector without those games.
+    """
+    st = get_state()
+    if st.get('error'):
+        return jsonify({'error': st['error']}), 503
+
+    games, model, tbu, enc = st['games'], st['model'], st['train_by_user'], st['user_enc']
+    try:
+        user_idx = int(enc.transform([user_id])[0])
+    except (ValueError, KeyError):
+        return jsonify({'error': f"User '{user_id}' is not in the training data."}), 404
+
+    n = max(1, min(int(request.args.get('n', 10)), 20))
+    seen = set(tbu.get(user_idx, []))
+    scores = model.score_all(user_idx).copy()
+    if seen:
+        scores[list(seen)] = -np.inf
+    top = [int(i) for i in np.argsort(-scores)[:n]]
+
+    explainer = st['explainer']
+    out = []
+    for item in top:
+        loo = explainer.leave_one_out(user_idx, target_item=item, top_n=3)
+        influences = []
+        if loo:
+            for d in loo['influences']:
+                if d['rank_delta'] > 0:
+                    influences.append({'name': d['name'],
+                                       'rank_delta': int(d['rank_delta']),
+                                       'score_delta': float(d['score_delta'])})
+        out.append({
+            'item_idx': item,
+            'name': game_name(games, item),
+            'genres': game_genres(games, item),
+            'explanation': render_explanation(loo) if loo else
+                           'Not enough history to explain this recommendation.',
+            'influences': influences,
+        })
+
+    return jsonify({
+        'user_id': user_id,
+        'display': star_name(user_id),
+        'history': [{'idx': int(i), 'name': game_name(games, i)} for i in sorted(seen)],
+        'recommendations': out,
+    })
+
+
+@app.get('/api/cold-start')
+def api_cold_start():
+    """Genre-filtered, sentiment-ranked picks for a user with no history."""
+    st = get_state()
+    if st.get('error'):
+        return jsonify({'error': st['error']}), 503
+
+    games_df = st['games']
+    all_genres = sorted({g for gs in games_df['genres']
+                         if isinstance(gs, (list, tuple)) for g in gs})
+    selected = request.args.getlist('genre')
+    if not selected:
+        return jsonify({'available_genres': all_genres, 'games': []})
+
+    top = cold_start_recommend(games_df, selected, n=12)
+    if top is None or top.empty:
+        return jsonify({'available_genres': all_genres, 'games': [],
+                        'message': 'No games matched those genres.'})
+
+    return jsonify({
+        'available_genres': all_genres,
+        'selected': selected,
+        'games': [{'name': r['app_name'], 'genres': list(r['genres']),
+                   'sentiment': r['sentiment'], 'price': r['price']}
+                  for _, r in top.iterrows()],
+    })
+
+
+# ------------------------------------------------- static assets + SPA
+
+@app.after_request
+def compress(resp):
+    """Gzip text responses.
+
+    The embedding file is 221.8KB of JSON and Flask ships it uncompressed by
+    default; gzipped it is roughly 78KB. Measured rather than assumed, and it is
+    the single largest asset on the page.
+    """
+    accept = request.headers.get('Accept-Encoding', '')
+    ctype = (resp.mimetype or '')
+    if ('gzip' not in accept.lower()
+            or resp.status_code < 200 or resp.status_code >= 300
+            or 'Content-Encoding' in resp.headers
+            or not (ctype.startswith('text/') or ctype in
+                    ('application/json', 'application/javascript', 'image/svg+xml'))):
+        return resp
+
+    # send_from_directory streams with direct_passthrough set, and get_data()
+    # raises on those. Static files are exactly what needs compressing here, so
+    # take them off the file wrapper rather than skipping them.
+    if resp.direct_passthrough:
+        resp.direct_passthrough = False
+
+    data = resp.get_data()
+    if len(data) < 1024:            # below this the header costs more than it saves
+        return resp
+
+    buf = io.BytesIO()
+    with gzip.GzipFile(fileobj=buf, mode='wb', compresslevel=6) as gz:
+        gz.write(data)
+    resp.set_data(buf.getvalue())
+    resp.headers['Content-Encoding'] = 'gzip'
+    resp.headers['Content-Length'] = str(len(resp.get_data()))
+    resp.headers.add('Vary', 'Accept-Encoding')
+    return resp
+
+
+@app.get('/static/<path:filename>')
+def legacy_static(filename):
+    """Generated figures and the embedding projection still live in static/."""
+    return send_from_directory('static', filename)
+
+
+@app.get('/')
+@app.get('/<path:path>')
+def spa(path=''):
+    """Serve the built front end, falling back to index.html for client routes."""
+    if not os.path.isdir(DIST_DIR):
+        return (
+            "<h1>Front end not built</h1>"
+            "<p>Run <code>npm install &amp;&amp; npm run build</code> in <code>frontend/</code>.</p>",
+            503,
+        )
+    candidate = os.path.join(DIST_DIR, path)
+    if path and os.path.isfile(candidate):
+        return send_from_directory(DIST_DIR, path)
+    return send_from_directory(DIST_DIR, 'index.html')
+
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=os.environ.get('FLASK_DEBUG') == '1',
+            port=int(os.environ.get('PORT', 5000)))

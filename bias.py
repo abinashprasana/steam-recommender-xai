@@ -2,6 +2,8 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import plotstyle
+plotstyle.apply()
 from collections import Counter
 
 def run_bias_analysis(df_filtered, games_in_use, test_uids, hybrid_recommender, output_dir='static'):
@@ -32,9 +34,9 @@ def run_bias_analysis(df_filtered, games_in_use, test_uids, hybrid_recommender, 
     sorted_b = bias_df.sort_values('Games', ascending=False)
     x = np.arange(len(sorted_b))
     w = 0.35
-    axes[0].bar(x - w/2, sorted_b['Games'], w, label='Games in catalogue', color='#2980B9', edgecolor='white')
+    axes[0].bar(x - w/2, sorted_b['Games'], w, label='Games in catalogue', color=plotstyle.BLUE, edgecolor=plotstyle.BG)
     int_scaled = (sorted_b['Interactions'] / sorted_b['Interactions'].max() * sorted_b['Games'].max())
-    axes[0].bar(x + w/2, int_scaled, w, label='Interactions (scaled)', color='#E8A838', edgecolor='white')
+    axes[0].bar(x + w/2, int_scaled, w, label='Interactions (scaled)', color=plotstyle.AMBER, edgecolor=plotstyle.BG)
     axes[0].set_xticks(x)
     axes[0].set_xticklabels(sorted_b['Genre'], rotation=30, ha='right')
     axes[0].set_title('Games in Catalogue vs Interaction Volume')
@@ -42,8 +44,8 @@ def run_bias_analysis(df_filtered, games_in_use, test_uids, hybrid_recommender, 
     axes[0].legend()
 
     by_ratio = bias_df.sort_values('Per Game', ascending=True)
-    bar_colors = ['#E67E22' if g == 'Indie' else '#2980B9' for g in by_ratio['Genre']]
-    axes[1].barh(by_ratio['Genre'], by_ratio['Per Game'], color=bar_colors, edgecolor='white')
+    bar_colors = [plotstyle.AMBER if g == 'Indie' else plotstyle.BLUE for g in by_ratio['Genre']]
+    axes[1].barh(by_ratio['Genre'], by_ratio['Per Game'], color=bar_colors, edgecolor=plotstyle.BG)
     axes[1].set_title('Interactions per Game by Genre (Indie highlighted)')
     axes[1].set_xlabel('Avg Interactions per Game')
     plt.suptitle('Popularity Bias in the Steam Dataset', fontsize=13)
@@ -74,8 +76,8 @@ def run_bias_analysis(df_filtered, games_in_use, test_uids, hybrid_recommender, 
     x = np.arange(len(compare_df))
     w = 0.35
     fig, ax = plt.subplots(figsize=(13, 6))
-    ax.bar(x - w/2, compare_df['Catalogue (%)'], w, label='In Catalogue', color='#2980B9', edgecolor='white')
-    ax.bar(x + w/2, compare_df['Recommendations (%)'], w, label='In Recommendations', color='#E67E22', edgecolor='white')
+    ax.bar(x - w/2, compare_df['Catalogue (%)'], w, label='In Catalogue', color=plotstyle.BLUE, edgecolor=plotstyle.BG)
+    ax.bar(x + w/2, compare_df['Recommendations (%)'], w, label='In Recommendations', color=plotstyle.AMBER, edgecolor=plotstyle.BG)
     ax.set_xticks(x)
     ax.set_xticklabels(compare_df['Genre'], rotation=30, ha='right')
     ax.set_title('Catalogue vs Recommendation Genre Share (gap = bias)')
@@ -97,7 +99,7 @@ def run_bias_analysis(df_filtered, games_in_use, test_uids, hybrid_recommender, 
     res_df = pd.DataFrame(result)
     
     fig, ax = plt.subplots(figsize=(8, 5))
-    ax.plot(res_df['beta'], res_df['avg_popularity'], marker='o', color='#4C72B0', linewidth=2, markersize=8)
+    ax.plot(res_df['beta'], res_df['avg_popularity'], marker='o', color=plotstyle.BLUE, linewidth=2, markersize=8)
     ax.set_xlabel('Beta  (1.0 = standard, lower = more fairness)')
     ax.set_ylabel('Avg Item Popularity in Recommendations')
     ax.set_title('Mitigation 1 — Popularity Drops as Beta Decreases')
@@ -120,10 +122,10 @@ def run_bias_analysis(df_filtered, games_in_use, test_uids, hybrid_recommender, 
     div_ent = [genre_entropy(hybrid_recommender.diverse_recommend(uid)) for uid in sample_100]
     
     fig, ax = plt.subplots(figsize=(9, 5))
-    ax.hist(std_ent, bins=15, alpha=0.65, label='Standard', color='#2E86AB', edgecolor='white')
-    ax.hist(div_ent, bins=15, alpha=0.65, label='Diversified', color='#F18F01', edgecolor='white')
-    ax.axvline(np.mean(std_ent), color='#1a5f7a', linestyle='--', linewidth=1.5, label=f'Mean std = {np.mean(std_ent):.2f}')
-    ax.axvline(np.mean(div_ent), color='#9e5e00', linestyle='--', linewidth=1.5, label=f'Mean div = {np.mean(div_ent):.2f}')
+    ax.hist(std_ent, bins=15, alpha=0.65, label='Standard', color=plotstyle.BLUE, edgecolor=plotstyle.BG)
+    ax.hist(div_ent, bins=15, alpha=0.65, label='Diversified', color=plotstyle.AMBER, edgecolor=plotstyle.BG)
+    ax.axvline(np.mean(std_ent), color=plotstyle.BLUE, linestyle='--', linewidth=1.5, label=f'Mean std = {np.mean(std_ent):.2f}')
+    ax.axvline(np.mean(div_ent), color=plotstyle.AMBER, linestyle='--', linewidth=1.5, label=f'Mean div = {np.mean(div_ent):.2f}')
     ax.set_xlabel('Genre Entropy (higher = more varied)')
     ax.set_ylabel('Number of Users')
     ax.set_title('Mitigation 2 — Diversity Constraint Shifts the Distribution Right')
