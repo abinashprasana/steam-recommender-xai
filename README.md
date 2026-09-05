@@ -309,6 +309,12 @@ cd steam-recommender-xai
 pip install -r requirements.txt
 ```
 
+`requirements.txt` is deliberately just what `app.py` needs to serve a request: Flask, numpy, pandas, scipy, scikit-learn, joblib, tqdm. Training, the generated figures and the test suite need more on top (matplotlib, shap, lime, torch, pytest):
+
+```bash
+pip install -r requirements-train.txt
+```
+
 **2. Build the front end**
 ```bash
 npm --prefix frontend install && npm --prefix frontend run build

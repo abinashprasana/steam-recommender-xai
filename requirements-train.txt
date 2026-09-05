@@ -1,0 +1,10 @@
+# Everything needed on top of requirements.txt to train, generate figures,
+# and run the test suite. Not installed by a deployed server -- see
+# requirements.txt for why that split exists.
+-r requirements.txt
+
+matplotlib
+shap
+lime
+torch
+pytest

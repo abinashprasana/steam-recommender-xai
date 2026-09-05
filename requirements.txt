@@ -1,12 +1,17 @@
+# Runtime dependencies for app.py only -- what a deployed server actually
+# imports to answer a request. Verified by tracing app.py's real import graph
+# (including what gets unpickled out of artifacts/model.joblib: games_in_use
+# and item_feat_df are genuine pandas DataFrames, user_enc/item_enc are
+# sklearn LabelEncoders) rather than assumed.
+#
+# matplotlib, seaborn, shap, lime, torch and pytest are NOT here because
+# app.py never touches them -- they belong to training, figure generation and
+# tests, not serving. Bundling them anyway is what made the Vercel serverless
+# function 546MB and over its limit. See requirements-train.txt.
 Flask==3.0.3
 numpy
 pandas
-matplotlib
-seaborn
 scipy
 scikit-learn
-tqdm
-shap
-lime
 joblib
-pytest
+tqdm
