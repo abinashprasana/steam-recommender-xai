@@ -48,6 +48,14 @@ app = Flask(__name__, static_folder=None)
 
 _state = {'loaded': False}
 
+# Origins allowed to call the API cross-origin, e.g. a frontend built with
+# VITE_API_BASE pointed at this host and deployed separately (Vercel serving
+# the static bundle, this process serving /api elsewhere). Empty by default:
+# when Flask serves both the API and the bundle from one origin, as it does
+# locally and as api.ts assumes with no base set, no CORS header is needed and
+# none is sent. Set to a comma-separated list, or '*' for local testing only.
+_ALLOWED_ORIGINS = [o.strip() for o in os.environ.get('ALLOWED_ORIGIN', '').split(',') if o.strip()]
+
 
 class LoadedRecommender:
     """Scores users from persisted factors, with no training data in memory."""
@@ -267,6 +275,22 @@ def api_cold_start():
 
 
 # ------------------------------------------------- static assets + SPA
+
+@app.after_request
+def cors(resp):
+    """Allow a separately hosted frontend to call this API.
+
+    A no-op unless ALLOWED_ORIGIN is set, so single-origin deployments -- the
+    default, Flask serving its own bundle -- are unaffected.
+    """
+    if not _ALLOWED_ORIGINS:
+        return resp
+    origin = request.headers.get('Origin', '')
+    if origin and (origin in _ALLOWED_ORIGINS or '*' in _ALLOWED_ORIGINS):
+        resp.headers['Access-Control-Allow-Origin'] = origin
+        resp.headers.add('Vary', 'Origin')
+    return resp
+
 
 @app.after_request
 def compress(resp):

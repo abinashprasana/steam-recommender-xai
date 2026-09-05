@@ -1,0 +1,21 @@
+# Deploys app.py as a single web service: Flask serving both the JSON API
+# and the built frontend bundle from one origin, exactly as `python app.py`
+# does locally. This is the path that needs no CORS configuration and no
+# VITE_API_BASE -- see api.ts and app.py for the split-host alternative.
+#
+# What this build step does NOT do: run train.py. results.json and
+# static/embedding.json are committed to the repo, so the Results page works
+# from a fresh deploy with no training step. artifacts/model.joblib is not
+# committed (it's in .gitignore), so Live Recommendations and New Player will
+# answer 503 "No trained model found" until that file exists on this host --
+# see the note in .gitignore for the two ways to resolve that.
+services:
+  - type: web
+    name: waypoint
+    runtime: python
+    plan: free
+    buildCommand: |
+      pip install -r requirements.txt
+      npm --prefix frontend install
+      npm --prefix frontend run build
+    startCommand: python app.py

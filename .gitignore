@@ -5,3 +5,10 @@ __pycache__/
 20079788_Abinash Prasana Selvanathan_CA2_RS.txt
 extract.py
 artifacts/
+# model.joblib is what api/recommend and api/cold-start need to serve anything.
+# results.json and static/embedding.json come from the same training run and
+# ARE committed, so a fresh clone can already serve the Results page with no
+# training step; this is the one piece that leaves it inconsistent. Either
+# commit artifacts/model.joblib too (it is 2.6MB, `git add -f`) so a fresh
+# deploy works immediately, or add a build step that runs train.py before
+# app.py starts -- see render.yaml.

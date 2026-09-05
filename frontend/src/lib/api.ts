@@ -39,8 +39,23 @@ export interface ColdStartResponse {
   message?: string;
 }
 
-async function get<T>(url: string): Promise<T> {
-  const res = await fetch(url);
+/**
+ * Origin the API lives on. Empty by default, which keeps every request
+ * relative -- exactly today's behaviour when Flask serves both the API and
+ * this built bundle from one process.
+ *
+ * Set VITE_API_BASE at build time to point at a Flask instance hosted
+ * elsewhere (e.g. deploying this bundle to Vercel while the API runs on
+ * Render). Vercel serves only the static files in frontend/dist -- it has no
+ * Flask process behind it, so with no base set, every fetch below 404s
+ * against Vercel's own static host instead of reaching the API at all. That
+ * 404 is not a bug in the request; it means no base is configured for where
+ * this bundle is actually deployed.
+ */
+const API_BASE = (import.meta.env.VITE_API_BASE ?? '').replace(/\/$/, '');
+
+async function get<T>(path: string): Promise<T> {
+  const res = await fetch(API_BASE + path);
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error((body as { error?: string }).error ?? `Request failed (${res.status})`);
