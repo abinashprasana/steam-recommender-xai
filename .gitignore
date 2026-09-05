@@ -5,10 +5,13 @@ __pycache__/
 20079788_Abinash Prasana Selvanathan_CA2_RS.txt
 extract.py
 artifacts/
-# model.joblib is what api/recommend and api/cold-start need to serve anything.
-# results.json and static/embedding.json come from the same training run and
-# ARE committed, so a fresh clone can already serve the Results page with no
-# training step; this is the one piece that leaves it inconsistent. Either
-# commit artifacts/model.joblib too (it is 2.6MB, `git add -f`) so a fresh
-# deploy works immediately, or add a build step that runs train.py before
-# app.py starts -- see render.yaml.
+!artifacts/model.joblib
+# Everything else in artifacts/ stays ignored (intermediate/scratch output);
+# model.joblib is force-added and tracked despite the directory rule above.
+# It's what api/recommend and api/cold-start need to serve anything -- without
+# it a fresh deploy answers "No trained model found. Run python train.py
+# first." on both, which is exactly what happened on the first Vercel deploy
+# of this fix. results.json and static/embedding.json come from the same
+# training run and were already committed; this closes the one piece that
+# was inconsistent with them. Re-run train.py and re-add this file (2.6MB)
+# whenever the model changes -- it does not update itself.
