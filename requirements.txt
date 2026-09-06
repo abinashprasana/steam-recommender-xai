@@ -12,6 +12,16 @@ Flask==3.0.3
 numpy
 pandas
 scipy
-scikit-learn
+# Pinned, unlike the rest of this file: artifacts/model.joblib embeds two
+# LabelEncoders (user_enc, item_enc) fitted under 1.7.1. joblib.load prints
+# InconsistentVersionWarning against anything else, and a newer release can
+# fail to unpickle them outright rather than just warn -- confirmed against
+# PyPI to still ship cp310-cp313 wheels for Linux/macOS/Windows, so this pin
+# won't break the Vercel build. requirements-train.txt inherits this via
+# `-r requirements.txt`, so a future `python train.py` retrains under the same
+# version rather than quietly drifting the artifact away from this pin again.
+# Re-run train.py and bump this together if the model is ever retrained on a
+# newer scikit-learn on purpose.
+scikit-learn==1.7.1
 joblib
 tqdm
