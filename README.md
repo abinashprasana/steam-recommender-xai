@@ -10,12 +10,21 @@
 [![TypeScript](https://img.shields.io/badge/UI-Vite%20%2B%20TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://vitejs.dev)
 [![Faithfulness](https://img.shields.io/badge/Faithfulness-52%25-f0a868?style=for-the-badge)](.)
 [![Tests](https://img.shields.io/badge/Tests-29%20passing-2ea44f?style=for-the-badge)](.)
+[![Deployment](https://img.shields.io/badge/Deployment-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://steam-recommender-xai-eta.vercel.app/)
 
 <br/>
 
 *UCSD Steam reviews · 6,684 players · 2,758 games · full catalogue ranking · no sampled negatives*
 
 </div>
+
+---
+
+## 🎬 Live Demo
+
+[![Open Live App](https://img.shields.io/badge/Open%20Live%20App%20%F0%9F%9A%80-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://steam-recommender-xai-eta.vercel.app/)
+
+The app is deployed on Vercel, running the same Flask API and Vite front end described below. Open it, pick a player under Live Recommendations, and the counterfactual explanations are computed on that request, against the same trained factors the results table reports.
 
 ---
 
@@ -31,7 +40,7 @@ The headline finding is not flattering. A non-personalised popularity baseline b
 
 ## 🖥️ The Application
 
-There is no hosted demo. The app runs locally: a Flask JSON API serving a Vite and TypeScript front end, with live inference against the trained factors.
+A Flask JSON API serves a Vite and TypeScript front end, with live inference against the trained factors. The same setup runs locally or on Vercel.
 
 Three pages. **Results** is the full evaluation report with the charts drawn from `results.json` at load time. **Live Recommendations** picks a real player from the training data and returns ten games, each with the counterfactual explanation attached. **New Player** is the cold start path, genre filtered and sentiment ranked, for someone with no history at all.
 
